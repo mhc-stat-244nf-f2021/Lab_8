@@ -72,13 +72,13 @@ SIR_simulation <- function(N, S0, I0, R_0, D, Time){
 }
 ```
 
-After you have finished modifying your function, test it for the following values: N=1000, I0=1, R0=0, R_0=2, D=2 days, Time=28 days. Make sure to assign it to a value (like `SIR_sim1`).
+After you have finished modifying your function, test it for the following values: N=1000, S0=999, I0=1, R_0=2, D=2 days, Time=28 days. Make sure to assign it to a value (like `SIR_sim1`).
 
 ```{r}
 
 ```
 
-If we want to make sure we can recover the same result, we need to use the set.seed function prior to running our function and assigning it. Set the seed first (you can pick any number as the argument to set.seed), and then test the function for the following values: N=1000, I0=1, R0=0, R_0=2, D=2 days, Time=28 days. Make sure to assign it to a value (like `SIR_sim1`).
+If we want to make sure we can recover the same result, we need to use the set.seed function prior to running our function and assigning it. Set the seed first (you can pick any number as the argument to set.seed), and then test the function for the following values: N=1000, S0=999, I0=1, R_0=2, D=2 days, Time=28 days. Make sure to assign it to a value (like `SIR_sim1`).
 
 ```{r}
 
@@ -101,15 +101,15 @@ Now you have two possible outcomes for this SIR model with the same initial cond
 ```{r}
 ## We will make a column called Itr that 
 ## consists of 1s to say this is the first iteration
-sim_SIR1$Itr <- rep(1, nrow(sim_SIR1))
+SIR_sim1$Itr <- rep(1, nrow(SIR_sim1))
 ## We will make a column called Itr that 
 ## consists of 2s to say this is the second iteration
-sim_SIR2$Itr <- rep(2, nrow(sim_SIR2))
+SIR_sim2$Itr <- rep(2, nrow(SIR_sim2))
 ## Combine the two data frames 
-sim_SIR <- rbind(sim_SIR1, sim_SIR2)
+sim_SIR <- rbind(SIR_sim1, SIR_sim2)
 ```
 
-Plot your result. We have used color for compartment using `geom_line(aes(color=compartment))`. You can include information to differentiate between the two simulations:  `geom_line(aes(color=compartment, linetype=Itr))`.
+Plot your result. We have used color for compartment using `geom_line(aes(color=compartment))`. You can include information to differentiate between the two simulations:  `geom_line(aes(color=compartment, linetype=as.factor(Itr)))`.
 
 ```{r}
 
@@ -118,7 +118,7 @@ Plot your result. We have used color for compartment using `geom_line(aes(color=
 If you have more time, repeat the same steps for the SEIR model. The difference equations are in the notes from the previous class. Code for the deterministic model that you need to amend is given below:
 
 ```{r}
-SEIR_simulation <- function(N, E0, I0, R0, R_0, pD, D, Time){
+SEIR_simulation <- function(N, S0, E0, I0, R_0, pD, D, Time){
   SEIR_df <- data.frame(time=0:Time,
                      S=rep(NA, Time+1),
                      E=rep(NA, Time+1),
@@ -126,10 +126,10 @@ SEIR_simulation <- function(N, E0, I0, R0, R_0, pD, D, Time){
                      R=rep(NA, Time+1),
                      lambda_t=rep(NA, Time+1))
 
-  SEIR_df$S[1] <- N-E0-I0-R0
+  SEIR_df$S[1] <- S0
   SEIR_df$E[1] <- E0
   SEIR_df$I[1] <- I0
-  SEIR_df$R[1] <- R0
+  SEIR_df$R[1] <- N-S0-E0-I0
 
   for (i in 2:(Time+1)){
     SEIR_df$lambda_t[i] <- lambda_t_fcn(R_0=R_0, D=D, I_i=SEIR_df$I[i-1], N=N)
