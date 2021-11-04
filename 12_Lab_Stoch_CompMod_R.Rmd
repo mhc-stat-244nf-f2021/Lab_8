@@ -1,0 +1,150 @@
+---
+title: 'Lab 8: Stochastic Compartmental Models'
+author: "YOUR NAME HERE"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(ggplot2)
+
+## function to calculate lambda_t
+lambda_t_fcn <- function(R_0, D, I_i, N){
+  c_e <- R_0/D
+  return(1-exp(-c_e*I_i/N))
+}
+```
+
+Today, we will be converting our functions for SIR (`SIR_simulation`) and SEIR (`SEIR_simulation`) models that we wrote in the last lab from functions that produce deterministic simulations to functions that produce stochastic distributions. 
+
+## SIR model
+
+The difference equations for the stochastic version of the SIR model are given below:
+
+$$
+S_t=S_{t-1}-I_t^{(SI)}\\
+I_t=I_{t-1}+I_t^{(SI)}-R_t^{(IR)}\\
+R_t=R_{t-1}+R_t^{(IR)}\\
+$$
+
+Remember now we have random variables in our difference equations: 
+
+- $I_t^{(SI)}$: number of newly infectious individuals at time t
+- $R_t^{(IR)}$: number of newly recovered individuals at time t
+
+We will use the chain binomial structure that we discussed in the previous class, which just means that 
+
+- $I_t^{(SI)}\sim Binomial(S_{t-1}, \lambda_t)$
+- $R_t^{(IR)}\sim Binomial(I_{t-1}, 1/D)$
+
+Below I have included a version of the function for the deterministic SIR simulation. We are going to need to make some modifications to this.
+
+1. There needs to be more storage - specifically, we need to add columns to the data frame to store the values of $I_t^{(SI)}$ and $R_t^{(IR)}$. We can call these columns I_SI and R_IR and add them to the `SIR_df` within the function.
+
+2. Inside the for loop, you need to use the `rbinom` function to sample from the two binomial distributions described above. You can assign your `rbinom` outcomes in `SIR_df$I_SI[i]` and `SIR_df$R_IR[i]`.
+
+3. In the for loop, you now need to modify your difference equations, adding the `SIR_df$I_SI[i]` and `SIR_df$R_IR[i]` pieces in place of the averages we were using before (the pieces that were parameter times some compartment value).
+
+```{r}
+SIR_simulation <- function(N, S0, I0, R_0, D, Time){
+  SIR_df <- data.frame(time=0:Time,
+                     S=rep(NA, Time+1),
+                     I=rep(NA, Time+1),
+                     R=rep(NA, Time+1),
+                     lambda_t=rep(NA, Time+1))
+
+  SIR_df$S[1] <- S0
+  SIR_df$I[1] <- I0
+  SIR_df$R[1] <- N-S0-I0 #I changed this; less confusing
+
+  for (i in 2:(Time+1)){
+    SIR_df$lambda_t[i] <- lambda_t_fcn(R_0=R_0, D=D, I_i=SIR_df$I[i-1], N=N)
+    SIR_df$S[i] <- SIR_df$S[i-1]-SIR_df$lambda_t[i]*SIR_df$S[i-1]
+    SIR_df$I[i] <- SIR_df$I[i-1]+SIR_df$lambda_t[i]*SIR_df$S[i-1]-1/D*SIR_df$I[i-1]
+    SIR_df$R[i] <- SIR_df$R[i-1]+1/D*SIR_df$I[i-1]
+  }
+  
+  return(data.frame(time=rep(0:Time, 3),
+                    compartment=rep(c("S","I", "R"), each=(Time+1)),
+                    count=c(SIR_df$S, SIR_df$I, SIR_df$R)))
+}
+```
+
+After you have finished modifying your function, test it for the following values: N=1000, I0=1, R0=0, R_0=2, D=2 days, Time=28 days. Make sure to assign it to a value (like `SIR_sim1`).
+
+```{r}
+
+```
+
+If we want to make sure we can recover the same result, we need to use the set.seed function prior to running our function and assigning it. Set the seed first (you can pick any number as the argument to set.seed), and then test the function for the following values: N=1000, I0=1, R0=0, R_0=2, D=2 days, Time=28 days. Make sure to assign it to a value (like `SIR_sim1`).
+
+```{r}
+
+```
+
+Plot your result.
+
+```{r}
+
+```
+
+Do the same thing again, but do not set a seed first (or do, just make sure it is a different seed than before) and assign the simulation to `SIR_sim2`. 
+
+```{r}
+
+```
+
+Now you have two possible outcomes for this SIR model with the same initial conditions. It would be nice to plot them on the same axes so we can compare them (and see that they are different because of the stochastic nature of this model). Let's combine these two data frames - we are going to do this by hand. You can use the following code:
+
+```{r}
+## We will make a column called Itr that 
+## consists of 1s to say this is the first iteration
+sim_SIR1$Itr <- rep(1, nrow(sim_SIR1))
+## We will make a column called Itr that 
+## consists of 2s to say this is the second iteration
+sim_SIR2$Itr <- rep(2, nrow(sim_SIR2))
+## Combine the two data frames 
+sim_SIR <- rbind(sim_SIR1, sim_SIR2)
+```
+
+Plot your result. We have used color for compartment using `geom_line(aes(color=compartment))`. You can include information to differentiate between the two simulations:  `geom_line(aes(color=compartment, linetype=Itr))`.
+
+```{r}
+
+```
+
+If you have more time, repeat the same steps for the SEIR model. The difference equations are in the notes from the previous class. Code for the deterministic model that you need to amend is given below:
+
+```{r}
+SEIR_simulation <- function(N, E0, I0, R0, R_0, pD, D, Time){
+  SEIR_df <- data.frame(time=0:Time,
+                     S=rep(NA, Time+1),
+                     E=rep(NA, Time+1),
+                     I=rep(NA, Time+1),
+                     R=rep(NA, Time+1),
+                     lambda_t=rep(NA, Time+1))
+
+  SEIR_df$S[1] <- N-E0-I0-R0
+  SEIR_df$E[1] <- E0
+  SEIR_df$I[1] <- I0
+  SEIR_df$R[1] <- R0
+
+  for (i in 2:(Time+1)){
+    SEIR_df$lambda_t[i] <- lambda_t_fcn(R_0=R_0, D=D, I_i=SEIR_df$I[i-1], N=N)
+    SEIR_df$S[i] <- SEIR_df$S[i-1]-SEIR_df$lambda_t[i]*SEIR_df$S[i-1]
+    SEIR_df$E[i] <- SEIR_df$E[i-1]+SEIR_df$lambda_t[i]*SEIR_df$S[i-1]-1/pD*SEIR_df$E[i-1]
+    SEIR_df$I[i] <- SEIR_df$I[i-1]+1/pD*SEIR_df$E[i-1]-1/D*SEIR_df$I[i-1]
+    SEIR_df$R[i] <- SEIR_df$R[i-1]+1/D*SEIR_df$I[i-1]
+  }
+  
+  max_time <- SEIR_df$time[which.max(SEIR_df$I)]
+  HIT <- 1-1/R_0
+  df <- data.frame(time=rep(0:Time, 4),
+                   compartment=rep(c("S","E", "I", "R"), each=(Time+1)),
+                   count=c(SEIR_df$S, SEIR_df$E, SEIR_df$I, SEIR_df$R))
+  
+  return(list(df=df, HIT=HIT, max_time=max_time))
+}
+```
